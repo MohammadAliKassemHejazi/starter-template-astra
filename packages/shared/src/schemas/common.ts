@@ -12,4 +12,5 @@ export const passwordSchema = z
 
 export const nameSchema = z.string().trim().min(1).max(100);
 
-export const uuidSchema = z.string().uuid();
+// Lowercased so string comparisons against the (lowercase) session user id can never be bypassed by casing.
+export const uuidSchema = z.string().uuid().transform((s) => s.toLowerCase());

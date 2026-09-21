@@ -1,0 +1,128 @@
+# Local-only stack. Setup: `npm run setup` (creates .env), then `docker compose up --build`.
+# Never push/deploy images from here. Secrets come from .env only (gitignored).
+name: project
+
+x-server-env: &server-env
+  NODE_ENV: ${NODE_ENV:?run npm run setup}
+  LOG_LEVEL: ${LOG_LEVEL:?run npm run setup}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?run npm run setup}
+  ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:?run npm run setup}
+  REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:?run npm run setup}
+  ARGON2_MEMORY_KIB: ${ARGON2_MEMORY_KIB:?run npm run setup}
+  ARGON2_TIME_COST: ${ARGON2_TIME_COST:?run npm run setup}
+  ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:?run npm run setup}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?run npm run setup}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?run npm run setup}
+  CLIENT_ORIGIN: ${CLIENT_ORIGIN:?run npm run setup}
+  TRUST_PROXY: ${TRUST_PROXY:?run npm run setup}
+  RATE_LIMIT_GENERAL_MAX: ${RATE_LIMIT_GENERAL_MAX:?run npm run setup}
+  # E2E: the auth limit is too low for a full e2e run. Recreate the server with a bigger value for that run only:
+  #   RATE_LIMIT_AUTH_MAX=10000 docker compose up -d --force-recreate server
+  #   docker compose --profile e2e run --rm e2e
+  RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:?run npm run setup}
+  RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:?run npm run setup}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?run npm run setup}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run npm run setup}
+      POSTGRES_DB: ${POSTGRES_DB:?run npm run setup}
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # init scripts run only on first init of an empty volume (docker compose down -v to redo)
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *server-env
+      DATABASE_URL: ${DATABASE_URL:?run npm run setup}
+      PORT: "4000"
+    command: ["sh", "-c", "npm run db:migrate -w server && npm run db:seed -w server && npm run start -w server"]
+    ports:
+      - "127.0.0.1:${SERVER_HOST_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      target: runtime
+      args:
+        API_ORIGIN: ${API_ORIGIN:?run npm run setup}
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      API_ORIGIN: ${API_ORIGIN:?run npm run setup}
+    ports:
+      - "127.0.0.1:${CLIENT_HOST_PORT:-3000}:3000"
+
+  server-test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *server-env
+      NODE_ENV: test
+      DATABASE_URL: ${TEST_DATABASE_URL:?run npm run setup}
+      TEST_DATABASE_URL: ${TEST_DATABASE_URL:?run npm run setup}
+    command: ["npm", "run", "test", "-w", "server"]
+
+  client-test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      target: runtime
+      args:
+        API_ORIGIN: ${API_ORIGIN:?run npm run setup}
+    environment:
+      NODE_ENV: test
+    command: ["npm", "run", "test", "-w", "client"]
+
+  e2e:
+    profiles: ["e2e"]
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      target: e2e
+    depends_on:
+      client:
+        condition: service_started
+    environment:
+      BASE_URL: http://client:3000
+      E2E_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?run npm run setup}
+      E2E_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?run npm run setup}
+      CI: "1"
+    command: ["npm", "run", "e2e", "-w", "client"]
+
+volumes:
+  pgdata:

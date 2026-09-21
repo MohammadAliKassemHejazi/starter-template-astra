@@ -1,3 +1,4 @@
+import { uuidSchema } from './common';
 import { z } from 'zod';
 
 export const paginationQuerySchema = z
@@ -8,5 +9,5 @@ export const paginationQuerySchema = z
   .strict();
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
-export const idParamSchema = z.object({ id: z.string().uuid() }).strict();
+export const idParamSchema = z.object({ id: uuidSchema }).strict();
 export type IdParam = z.infer<typeof idParamSchema>;

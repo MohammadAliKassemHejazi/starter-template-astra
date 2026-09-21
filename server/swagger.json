@@ -1,0 +1,81 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Starter Template API", "version": "1.0.0", "description": "Cookie-based auth (httpOnly access + refresh cookies). Every unsafe request needs the X-CSRF-Token header (GET /api/auth/csrf) and an Origin equal to CLIENT_ORIGIN. All responses use the { success, message, data | errors } envelope." },
+  "servers": [{ "url": "/" }],
+  "tags": [{ "name": "Auth" }, { "name": "Users" }, { "name": "Roles" }, { "name": "Health" }],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": { "type": "apiKey", "in": "cookie", "name": "access_token" }
+    },
+    "parameters": {
+      "Id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "CsrfToken": { "name": "X-CSRF-Token", "in": "header", "required": true, "schema": { "type": "string" } }
+    },
+    "responses": {
+      "Failure": { "description": "Error envelope", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" } } } }
+    },
+    "schemas": {
+      "ApiFailure": {
+        "type": "object", "required": ["success", "message"],
+        "properties": {
+          "success": { "type": "boolean", "enum": [false] },
+          "message": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object", "required": ["field", "issue"], "properties": { "field": { "type": "string" }, "issue": { "type": "string" } } } }
+        }
+      },
+      "Envelope": {
+        "type": "object", "required": ["success", "message"],
+        "properties": { "success": { "type": "boolean", "enum": [true] }, "message": { "type": "string" }, "data": { "nullable": true } }
+      },
+      "Permission": { "type": "object", "required": ["id", "key"], "properties": { "id": { "type": "string", "format": "uuid" }, "key": { "type": "string" }, "description": { "type": "string", "nullable": true } } },
+      "Role": {
+        "type": "object", "required": ["id", "name", "isSystem"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "description": { "type": "string", "nullable": true },
+          "isSystem": { "type": "boolean" }, "permissions": { "type": "array", "items": { "$ref": "#/components/schemas/Permission" } }
+        }
+      },
+      "User": {
+        "type": "object", "required": ["id", "email", "name", "isActive", "createdAt", "roles"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" }, "email": { "type": "string", "format": "email" }, "name": { "type": "string" },
+          "isActive": { "type": "boolean" }, "lastLoginAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }, "roles": { "type": "array", "items": { "$ref": "#/components/schemas/Role" } }
+        }
+      },
+      "Session": { "type": "object", "required": ["user", "permissions"], "properties": { "user": { "$ref": "#/components/schemas/User" }, "permissions": { "type": "array", "items": { "type": "string" } } } },
+      "RegisterInput": { "type": "object", "additionalProperties": false, "required": ["email", "password", "name"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string", "minLength": 12, "maxLength": 128 }, "name": { "type": "string", "maxLength": 100 } } },
+      "LoginInput": { "type": "object", "additionalProperties": false, "required": ["email", "password"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string", "maxLength": 128 } } },
+      "UpdateUserInput": { "type": "object", "additionalProperties": false, "description": "Self: name, newPassword + currentPassword. Others (users:write): name, email, isActive.", "properties": { "name": { "type": "string" }, "email": { "type": "string", "format": "email" }, "isActive": { "type": "boolean" }, "newPassword": { "type": "string" }, "currentPassword": { "type": "string" } } },
+      "AssignRolesInput": { "type": "object", "additionalProperties": false, "required": ["roleIds"], "properties": { "roleIds": { "type": "array", "maxItems": 50, "items": { "type": "string", "format": "uuid" } } } },
+      "RoleInput": { "type": "object", "additionalProperties": false, "required": ["name"], "properties": { "name": { "type": "string" }, "description": { "type": "string" } } },
+      "RolePermissionsInput": { "type": "object", "additionalProperties": false, "required": ["permissionIds"], "properties": { "permissionIds": { "type": "array", "maxItems": 200, "items": { "type": "string", "format": "uuid" } } } }
+    }
+  },
+  "paths": {
+    "/api/health": { "get": { "tags": ["Health"], "summary": "Liveness", "responses": { "200": { "description": "OK" } } } },
+    "/api/auth/csrf": { "get": { "tags": ["Auth"], "summary": "Issue a CSRF token (also sets the csrf cookie)", "responses": { "200": { "description": "{ csrfToken }" } } } },
+    "/api/auth/register": { "post": { "tags": ["Auth"], "summary": "Register (does not log in). 403 when registration is disabled; 409 on duplicate email.", "parameters": [{ "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterInput" } } } }, "responses": { "201": { "description": "UserDto" }, "400": { "$ref": "#/components/responses/Failure" }, "403": { "$ref": "#/components/responses/Failure" }, "409": { "$ref": "#/components/responses/Failure" }, "429": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/auth/login": { "post": { "tags": ["Auth"], "summary": "Login; sets access + refresh cookies", "parameters": [{ "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginInput" } } } }, "responses": { "200": { "description": "Session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Envelope" } } } }, "401": { "$ref": "#/components/responses/Failure" }, "429": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/auth/refresh": { "post": { "tags": ["Auth"], "summary": "Rotate the refresh token (reuse revokes the session family)", "parameters": [{ "$ref": "#/components/parameters/CsrfToken" }], "responses": { "200": { "description": "Refreshed" }, "401": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/auth/logout": { "post": { "tags": ["Auth"], "summary": "Logout from the refresh cookie alone; idempotent; clears all cookies", "parameters": [{ "$ref": "#/components/parameters/CsrfToken" }], "responses": { "200": { "description": "Logged out" } } } },
+    "/api/auth/me": { "get": { "tags": ["Auth"], "summary": "Current session", "security": [{ "cookieAuth": [] }], "responses": { "200": { "description": "Session" }, "401": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/users": { "get": { "tags": ["Users"], "summary": "List users (users:read)", "security": [{ "cookieAuth": [] }], "parameters": [{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } }, { "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }], "responses": { "200": { "description": "Paginated users" }, "401": { "$ref": "#/components/responses/Failure" }, "403": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/users/{id}": {
+      "get": { "tags": ["Users"], "summary": "Get user (users:read or self)", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "User" }, "403": { "$ref": "#/components/responses/Failure" }, "404": { "$ref": "#/components/responses/Failure" } } },
+      "patch": { "tags": ["Users"], "summary": "Update self or (users:write) another user", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }, { "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserInput" } } } }, "responses": { "200": { "description": "User" }, "400": { "$ref": "#/components/responses/Failure" }, "403": { "$ref": "#/components/responses/Failure" }, "409": { "$ref": "#/components/responses/Failure" } } },
+      "delete": { "tags": ["Users"], "summary": "Delete user (users:delete); last admin protected", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }, { "$ref": "#/components/parameters/CsrfToken" }], "responses": { "200": { "description": "Deleted" }, "403": { "$ref": "#/components/responses/Failure" }, "409": { "$ref": "#/components/responses/Failure" } } }
+    },
+    "/api/users/{id}/roles": { "put": { "tags": ["Users"], "summary": "Replace a user's roles (users:assign-role)", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }, { "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignRolesInput" } } } }, "responses": { "200": { "description": "User" }, "403": { "$ref": "#/components/responses/Failure" }, "409": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/roles": {
+      "get": { "tags": ["Roles"], "summary": "List roles with permissions (roles:read); returns an array", "security": [{ "cookieAuth": [] }], "responses": { "200": { "description": "Role[]" }, "403": { "$ref": "#/components/responses/Failure" } } },
+      "post": { "tags": ["Roles"], "summary": "Create role (roles:write; root-equivalent)", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RoleInput" } } } }, "responses": { "201": { "description": "Role" }, "409": { "$ref": "#/components/responses/Failure" } } }
+    },
+    "/api/roles/{id}": {
+      "patch": { "tags": ["Roles"], "summary": "Update custom role (roles:write); system roles immutable", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }, { "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RoleInput" } } } }, "responses": { "200": { "description": "Role" }, "403": { "$ref": "#/components/responses/Failure" } } },
+      "delete": { "tags": ["Roles"], "summary": "Delete custom role (roles:write)", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }, { "$ref": "#/components/parameters/CsrfToken" }], "responses": { "200": { "description": "Deleted" }, "403": { "$ref": "#/components/responses/Failure" }, "409": { "$ref": "#/components/responses/Failure" } } }
+    },
+    "/api/roles/{id}/permissions": { "put": { "tags": ["Roles"], "summary": "Replace a custom role's permissions (roles:write)", "security": [{ "cookieAuth": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }, { "$ref": "#/components/parameters/CsrfToken" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RolePermissionsInput" } } } }, "responses": { "200": { "description": "Role" }, "403": { "$ref": "#/components/responses/Failure" }, "409": { "$ref": "#/components/responses/Failure" } } } },
+    "/api/permissions": { "get": { "tags": ["Roles"], "summary": "List permissions (roles:read); returns an array", "security": [{ "cookieAuth": [] }], "responses": { "200": { "description": "Permission[]" }, "403": { "$ref": "#/components/responses/Failure" } } } }
+  }
+}
