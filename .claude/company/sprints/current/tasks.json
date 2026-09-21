@@ -1,5 +1,5 @@
 [
- {"id":"S0","description":"Monorepo scaffold","target_files":["package.json","tsconfig.base.json","client/","server/","packages/shared/",".env.example"],"verify_cmd":"npm install && npm run check --workspaces --if-present","status":"pending"},
+ {"id":"S0","description":"Monorepo scaffold","target_files":["package.json","tsconfig.base.json","client/","server/","packages/shared/",".env.example"],"verify_cmd":"npm install && npm run check --workspaces --if-present","status":"done"},
  {"id":"S1","description":"Shared contracts/schemas/enums","target_files":["packages/shared/src/**"],"verify_cmd":"npm run check -w @project/shared","status":"pending"},
  {"id":"S2","description":"Server auth core","target_files":["server/src/**"],"verify_cmd":"npm run test -w server -- auth","status":"pending"},
  {"id":"S3","description":"Server RBAC + admin API","target_files":["server/src/**"],"verify_cmd":"npm run test -w server -- rbac","status":"pending"},
