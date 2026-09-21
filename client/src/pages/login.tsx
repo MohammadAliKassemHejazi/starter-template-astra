@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -14,7 +15,11 @@ export default function LoginPage() {
   }, [isAuthenticated, router]);
 
   return (
-    <main className="mx-auto max-w-sm p-6">
+    <>
+      <Head>
+        <title>Sign in | Project</title>
+      </Head>
+      <main id="main" tabIndex={-1} className="mx-auto max-w-sm p-6">
       <h1 className="mb-6 text-2xl font-bold text-slate-900">Sign in</h1>
       <LoginForm />
       <p className="mt-4 text-sm text-slate-800">
@@ -23,6 +28,7 @@ export default function LoginPage() {
           Create one
         </Link>
       </p>
-    </main>
+      </main>
+    </>
   );
 }

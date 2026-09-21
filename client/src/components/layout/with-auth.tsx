@@ -8,9 +8,11 @@ export function withAuth<P extends object>(Component: ComponentType<P>, permissi
     const state = useRequireAuth(permission);
     if (state !== 'allowed') {
       return (
-        <p role="status" className="p-8 text-slate-700">
-          {state === 'loading' ? 'Checking your session…' : 'Redirecting…'}
-        </p>
+        <main id="main" tabIndex={-1}>
+          <p role="status" className="p-8 text-slate-700">
+            {state === 'loading' ? 'Checking your session…' : 'Redirecting…'}
+          </p>
+        </main>
       );
     }
     return <Component {...props} />;

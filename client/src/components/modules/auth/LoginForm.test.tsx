@@ -39,6 +39,13 @@ describe('LoginForm', () => {
     expect(svc.loginRequest).not.toHaveBeenCalled();
   });
 
+  it('moves focus to the first invalid field on failed validation', async () => {
+    renderWithStore(<LoginForm />);
+    fill('not-an-email', '');
+    await screen.findAllByRole('alert');
+    expect(screen.getByLabelText('Email')).toHaveFocus();
+  });
+
   it('submits normalized credentials and redirects to a safe next', async () => {
     svc.loginRequest.mockResolvedValue(session);
     query = { next: '/admin/users' };

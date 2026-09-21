@@ -52,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
         </nav>
       </header>
-      <div id="main">{children}</div>
+      {children}
     </>
   );
 }

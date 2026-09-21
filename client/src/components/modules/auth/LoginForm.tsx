@@ -5,7 +5,7 @@ import { TextField } from '../../common/TextField';
 import { useAppDispatch } from '../../../store';
 import { login } from '../../../store/slices/auth-slice';
 import { safeNextPath } from '../../../utils/safe-redirect';
-import { toFieldErrors } from '../../../utils/zod-field-errors';
+import { focusFirstInvalid, toFieldErrors } from '../../../utils/zod-field-errors';
 
 export function LoginForm() {
   const router = useRouter();
@@ -17,11 +17,14 @@ export function LoginForm() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const parsed = loginSchema.safeParse({ email: form.get('email'), password: form.get('password') });
     if (!parsed.success) {
-      setFieldErrors(toFieldErrors(parsed.error.issues));
+      const errors = toFieldErrors(parsed.error.issues);
+      setFieldErrors(errors);
       setFormError(null);
+      focusFirstInvalid(formEl, errors);
       return;
     }
     setFieldErrors({});

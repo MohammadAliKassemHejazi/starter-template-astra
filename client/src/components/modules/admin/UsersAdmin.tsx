@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Head from 'next/head';
 import { Permission, type PaginatedData, type RoleDto, type UserDto } from '@project/shared';
 import { Can } from '../../common/Can';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
@@ -79,6 +80,8 @@ export function UsersAdmin() {
   const [pendingDelete, setPendingDelete] = useState<UserDto | null>(null);
   const [rolesFor, setRolesFor] = useState<UserDto | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const load = useCallback(async (p: number): Promise<void> => {
     setIsLoading(true);
@@ -102,8 +105,11 @@ export function UsersAdmin() {
 
   const toggleActive = async (user: UserDto): Promise<void> => {
     setError(null);
+    setStatusMessage('');
     try {
-      replaceUser(await updateUser(user.id, { isActive: !user.isActive }));
+      const updated = await updateUser(user.id, { isActive: !user.isActive });
+      replaceUser(updated);
+      setStatusMessage(`${updated.email} ${updated.isActive ? 'activated' : 'deactivated'}`);
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -117,6 +123,7 @@ export function UsersAdmin() {
       await deleteUser(pendingDelete.id);
       setPendingDelete(null);
       await load(page);
+      headingRef.current?.focus();
     } catch (e) {
       setPendingDelete(null);
       setError(errorMessage(e));
@@ -128,8 +135,16 @@ export function UsersAdmin() {
   const pagination = data?.pagination;
 
   return (
-    <main className="mx-auto max-w-5xl p-4">
-      <h1 className="mb-4 text-2xl font-bold text-slate-900">Users</h1>
+    <main id="main" tabIndex={-1} className="mx-auto max-w-5xl p-4">
+      <Head>
+        <title>Users | Project</title>
+      </Head>
+      <h1 ref={headingRef} tabIndex={-1} className="mb-4 text-2xl font-bold text-slate-900">
+        Users
+      </h1>
+      <p role="status" className="sr-only">
+        {statusMessage}
+      </p>
       {error ? (
         <p role="alert" className="alert-error mb-4">
           {error}

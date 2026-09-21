@@ -4,7 +4,7 @@ import { PASSWORD_MIN, registerSchema } from '@project/shared';
 import { TextField } from '../../common/TextField';
 import { useAppDispatch } from '../../../store';
 import { register } from '../../../store/slices/auth-slice';
-import { fromServerErrors, toFieldErrors } from '../../../utils/zod-field-errors';
+import { focusFirstInvalid, fromServerErrors, toFieldErrors } from '../../../utils/zod-field-errors';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -16,15 +16,18 @@ export function RegisterForm() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const parsed = registerSchema.safeParse({
       name: form.get('name'),
       email: form.get('email'),
       password: form.get('password'),
     });
     if (!parsed.success) {
-      setFieldErrors(toFieldErrors(parsed.error.issues));
+      const errors = toFieldErrors(parsed.error.issues);
+      setFieldErrors(errors);
       setFormError(null);
+      focusFirstInvalid(formEl, errors);
       return;
     }
     setFieldErrors({});

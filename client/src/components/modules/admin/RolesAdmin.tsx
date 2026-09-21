@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import Head from 'next/head';
 import { Permission, createRoleSchema, type PermissionDto, type RoleDto } from '@project/shared';
 import { Can } from '../../common/Can';
 import { Modal } from '../../common/Modal';
 import { TextField } from '../../common/TextField';
 import { ApiError, errorMessage } from '../../../interfaces/api-error';
 import { createRole, listPermissions, listRoles, setRolePermissions } from '../../../services/admin-service';
-import { fromServerErrors, toFieldErrors } from '../../../utils/zod-field-errors';
+import { focusFirstInvalid, fromServerErrors, toFieldErrors } from '../../../utils/zod-field-errors';
 
 function CreateRoleDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -14,14 +15,17 @@ function CreateRoleDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const description = String(form.get('description') ?? '');
     const parsed = createRoleSchema.safeParse({
       name: form.get('name'),
       ...(description.trim() ? { description } : {}),
     });
     if (!parsed.success) {
-      setFieldErrors(toFieldErrors(parsed.error.issues));
+      const errors = toFieldErrors(parsed.error.issues);
+      setFieldErrors(errors);
+      focusFirstInvalid(formEl, errors);
       return;
     }
     setFieldErrors({});
@@ -147,7 +151,10 @@ export function RolesAdmin() {
   }, [load]);
 
   return (
-    <main className="mx-auto max-w-5xl p-4">
+    <main id="main" tabIndex={-1} className="mx-auto max-w-5xl p-4">
+      <Head>
+        <title>Roles | Project</title>
+      </Head>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Roles</h1>
         <Can permission={Permission.RolesWrite}>
