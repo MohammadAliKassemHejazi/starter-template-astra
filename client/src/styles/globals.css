@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn border-indigo-700 bg-indigo-700 text-white hover:bg-indigo-800;
+  }
+  .btn-secondary {
+    @apply btn border-slate-400 bg-white text-slate-900 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply btn border-red-700 bg-red-700 text-white hover:bg-red-800;
+  }
+  .input {
+    @apply block w-full rounded-md border border-slate-500 bg-white px-3 py-2 text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-700 aria-[invalid=true]:border-red-700;
+  }
+  .alert-error {
+    @apply rounded-md border border-red-700 bg-red-50 px-3 py-2 text-sm text-red-900;
+  }
+  .alert-info {
+    @apply rounded-md border border-indigo-700 bg-indigo-50 px-3 py-2 text-sm text-indigo-900;
+  }
+  .table-cell {
+    @apply border-b border-slate-300 px-3 py-2 text-left align-top text-sm text-slate-900;
+  }
+}
