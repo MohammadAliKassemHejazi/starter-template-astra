@@ -1,0 +1,15 @@
+{
+  "_comment": "OPTIONAL, not forced. Containerizes the environment agents run bash/tests/migrations in, so a flawed command's blast radius is the container, not the host machine. Verify against your actual stack before relying on it — this is a reasonable Node/TS starting point, not tailored to every project (e.g. add a postgres service if the project needs one).",
+  "name": "astrasyntx-dev",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "npm install --no-save 2>/dev/null; node .claude/setup/install-git-hooks.mjs 2>/dev/null || true",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    }
+  },
+  "remoteUser": "node"
+}

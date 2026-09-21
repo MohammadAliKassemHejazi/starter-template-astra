@@ -1,0 +1,12 @@
+{
+  "_comment": "Reference scripts block for a client repo. `npm run check` is REQUIRED by the Definition of Done in CLAUDE.md and gates integration-merge — it must exist in every client project. qa-devops merges this into the project's package.json during setup; adjust the individual commands to the project's actual tooling, but keep the `check` entry point identical so the DoD and the merge gate always resolve.",
+  "scripts": {
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build": "next build",
+    "dev": "next dev"
+  }
+}

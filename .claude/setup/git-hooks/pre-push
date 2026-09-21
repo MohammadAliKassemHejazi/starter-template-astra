@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# OS-level defense-in-depth for the merge gate. Runs `npm run check` before
+# ANY push, the same ground-truth signal integration-merge.md already
+# requires — but enforced by git itself, not by an agent's own diligence.
+set -uo pipefail
+
+if [ -f package.json ] && grep -q '"check"' package.json 2>/dev/null; then
+  echo "[pre-push] Running npm run check (ground truth before push, per integration-merge.md)..."
+  if ! npm run check; then
+    echo "[pre-push] BLOCKED: npm run check failed. Fix it before pushing — a red branch does not merge." >&2
+    exit 1
+  fi
+else
+  echo "[pre-push] NOTE: no 'check' script found in package.json — nothing to verify. This itself is a gap (see templates/scaffold/package.scripts.json)." >&2
+fi
+exit 0

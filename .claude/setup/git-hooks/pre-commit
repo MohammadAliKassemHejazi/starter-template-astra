@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# OS-level defense-in-depth. Fires on `git commit` REGARDLESS of whether the
+# change came from the top-level session, a Task-dispatched subagent, an MCP
+# tool call, or a human typing directly — git itself invokes this, not Claude
+# Code's own hook-dispatch pipeline. This exists because current, credible
+# reports show Claude Code's own PreToolUse hooks and permission rules do not
+# always reach subagent-originated tool calls reliably (a live, evolving area,
+# not a permanent limitation) — this layer does not depend on that working.
+# It is a SECOND layer, not a replacement for .claude/hooks/safety-guard.mjs.
+set -euo pipefail
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM || true)
+[ -z "$STAGED" ] && exit 0
+
+# 1. Never commit real secret files, regardless of which agent staged them.
+BLOCKED_PATTERNS='(^|/)\.env($|\.[^.]+$)|(^|/)id_rsa$|(^|/)id_ed25519$|\.pem$|(^|/)credentials\.json$'
+for f in $STAGED; do
+  case "$f" in
+    *.env.example|*.env.template) continue ;;
+  esac
+  if echo "$f" | grep -qE "$BLOCKED_PATTERNS"; then
+    echo "[pre-commit] BLOCKED: '$f' matches a secret-file pattern. Never commit real secrets." >&2
+    echo "[pre-commit] If this is a template (.env.example), rename it to be unambiguous." >&2
+    exit 1
+  fi
+done
+
+# 2. Scan staged content for obvious hardcoded secrets (best-effort, not exhaustive).
+if git diff --cached -U0 -- . ':(exclude)*.lock' | grep -qiE '(api[_-]?key|secret|password|token)\b.{0,20}=\s*"?[A-Za-z0-9_-]{16,}'; then
+  echo "[pre-commit] WARNING: staged diff contains what looks like a hardcoded credential." >&2
+  echo "[pre-commit] Review the diff. If this is a false positive (a variable NAME, not a value), commit again — this check does not re-block automatically." >&2
+  exit 1
+fi
+
+# 3. TypeScript-only rule: no new .js/.jsx source files (docs/CONVENTIONS.md).
+NEW_JS=$(git diff --cached --name-only --diff-filter=A | grep -E '\.(js|jsx)$' | grep -vE '\.config\.(js|jsx)$' || true)
+if [ -n "$NEW_JS" ]; then
+  echo "[pre-commit] BLOCKED: new plain-JS source file(s), violates the TypeScript-only rule:" >&2
+  echo "$NEW_JS" | sed 's/^/    /' >&2
+  exit 1
+fi
+
+exit 0

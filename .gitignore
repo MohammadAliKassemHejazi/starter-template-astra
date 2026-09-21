@@ -1,0 +1,12 @@
+graphify-out/
+.claude/company/.teamlead.lock
+node_modules/
+.env
+.env.*
+!.env.example
+!.env.template
+.claude/setup/.snapshots/*
+!.claude/setup/.snapshots/.gitkeep
+.claude/company/.last-optimization-review
+.claude/settings.local.json
+repomix-output.xml

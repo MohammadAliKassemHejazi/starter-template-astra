@@ -1,0 +1,33 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "_comment": "Conservative default for token-efficient codebase slices (token-efficiency.md). Verify current flags against `npx repomix --help` or https://repomix.com/guide/configuration before relying on this — the schema can drift and this file wasn't validated against a live repomix run.",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": true,
+    "removeComments": false,
+    "removeEmptyLines": true,
+    "showLineNumbers": true,
+    "topFilesLength": 20
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/coverage/**",
+      "**/*.lock",
+      "**/*.log",
+      "graphify-out/**",
+      ".claude/company/media/**/generated/**",
+      ".claude/company/**/*.md"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

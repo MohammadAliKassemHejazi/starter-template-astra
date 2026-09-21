@@ -1,0 +1,16 @@
+[
+  {
+    "id": "TASK-01",
+    "description": "Add Sequelize model + migration for Order and OrderItem",
+    "target_files": ["server/src/models/Order.ts", "server/src/models/OrderItem.ts", "server/src/scripts/migrations/*"],
+    "verify_cmd": "npm run test:unit -- order.model",
+    "status": "pending"
+  },
+  {
+    "id": "TASK-02",
+    "description": "Implement Stripe webhook handler with idempotency (payment-architecture-reference.md)",
+    "target_files": ["server/src/routes/webhooks.ts", "server/src/services/paymentService.ts"],
+    "verify_cmd": "npm run test:unit -- webhooks/stripe",
+    "status": "pending"
+  }
+]
